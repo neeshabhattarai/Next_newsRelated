@@ -1,46 +1,50 @@
-import { DUMMY_NEWS } from './dummy-news';
+import { DUMMY_NEWS } from '@/dummy-news';
+import sql from "better-sqlite3";
+const db=sql("news.db");
 
 export function getAllNews() {
-  return DUMMY_NEWS;
+  const data=db.prepare("SELECT * FROM news ").all();
+  // console.log("This is the data ")
+  // console.log(data);
+  return data  ;
+}
+export async function getById(id){
+  const data=db.prepare("select * from news where id=@id").get({id});
+  new Promise((res)=>setTimeout(() =>res, 2000))
+ return data ;
 }
 
 export function getLatestNews() {
-  return DUMMY_NEWS.slice(0, 3);
+  return db.prepare("select * from news limit 3").all();
 }
 
 export function getAvailableNewsYears() {
-  return DUMMY_NEWS.reduce((years, news) => {
-    const year = new Date(news.date).getFullYear();
-    if (!years.includes(year)) {
-      years.push(year);
-    }
-    return years;
-  }, []).sort((a, b) => b - a);
+  return db.prepare("SELECT DISTINCT strftime ('%Y',date) AS year FROM news ORDER BY year DESC").all().map((row)=>row.year);
 }
 
-export function getAvailableNewsMonths(year) {
-  return DUMMY_NEWS.reduce((months, news) => {
-    const newsYear = new Date(news.date).getFullYear();
-    if (newsYear === +year) {
-      const month = new Date(news.date).getMonth();
-      if (!months.includes(month)) {
-        months.push(month + 1);
-      }
-    }
-    return months;
-  }, []).sort((a, b) => b - a);
+export  function getAvailableNewsMonths(year) {
+  const data=  db.prepare(`
+    SELECT DISTINCT strftime('%m', date) AS month
+    FROM news
+    WHERE strftime('%Y', date) = @year
+    ORDER BY month DESC
+  `)
+  .all({ year: String(year) })
+  .map(row => row.month);
+
+
+return data;}
+
+export async function getNewsForYear(year) {
+  const data= db.prepare("SELECT * from news where strftime('%Y',date)=@year").all({year:String(year)})
+  ;
+  await new Promise((res)=>setTimeout(res,2000));
+  return data;
 }
 
-export function getNewsForYear(year) {
-  return DUMMY_NEWS.filter(
-    (news) => new Date(news.date).getFullYear() === +year
-  );
-}
-
-export function getNewsForYearAndMonth(year, month) {
-  return DUMMY_NEWS.filter((news) => {
-    const newsYear = new Date(news.date).getFullYear();
-    const newsMonth = new Date(news.date).getMonth() + 1;
-    return newsYear === +year && newsMonth === +month;
-  });
+export async function getNewsForYearAndMonth(year, month) {
+  console.log(year,month);
+   const data= db.prepare("SELECT * FROM news WHERE strftime('%Y',date)=@year and strftime('%m',date)=@month ").get({year:String(year),month:String(month)});
+   await new Promise((res)=>setTimeout(res,2000));
+return [data];
 }
